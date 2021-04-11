@@ -147,64 +147,73 @@ public class Cw2_pong extends Application {
                 System.out.println("before sleep, showing pop up" );
                 //let the code be on screen for 5 sec
                 
+                Runnable mtd = () -> {
+                    try {
+                        //player 1 body
+                        wallP1 = new Rectangle(PLAYER_WIDTH, PLAYER_HEIGHT, Color.GREEN);
+                        //                wallP1.setX(0.0);
+                        //                wallP1.setY(0.0);
+                        //player 1 body container
+                        wallP1Group = new Group(wallP1);
+
+                        //player 2 body
+                        wallP2 = new Rectangle(PLAYER_WIDTH, PLAYER_HEIGHT, Color.GREEN);
+                        //                wallP2.setX(SCREEN_WIDTH-PLAYER_WIDTH);
+                        //                wallP2.setY(0.0);
+                        //player 2 body container
+                        wallP2Group = new Group(wallP2);
+
+                        //ball body
+                        Circle ball = new Circle(BALL_RADIUS, Color.GREEN);
+                        ball.setCenterX(0.0);
+                        ball.setCenterY(0.0);
+
+                        //to hold graphics on pane based on X, Y coordinates
+                        anchorPane = new AnchorPane();
+                        anchorPane.setBackground(
+                                new Background(
+                                        new BackgroundFill(
+                                                Color.AZURE,
+                                                CornerRadii.EMPTY,
+                                                new Insets(10))
+                                )
+                        );
+                        //player1 body position
+                        AnchorPane.setTopAnchor(wallP1Group, player1YPos);
+                        AnchorPane.setLeftAnchor(wallP1Group, 0.0);
+                        anchorPane.getChildren().add(wallP1Group);
+                        //player2 body position
+                        AnchorPane.setLeftAnchor(wallP2Group, 0.0);
+                        AnchorPane.setTopAnchor(wallP2Group, player2YPos);
+                        anchorPane.getChildren().add(wallP2Group);
+                        //ball body position
+                        AnchorPane.setTopAnchor(ball, ballYPos);
+                        AnchorPane.setLeftAnchor(ball, ballXPos);
+                        anchorPane.getChildren().add(ball);
+
+
+                        roomSocket = new Socket(serverIP, roomPort);
+                        ObjectOutputStream objOut = new ObjectOutputStream(roomSocket.getOutputStream());
+                        ObjectInputStream objIn = new ObjectInputStream(roomSocket.getInputStream());
+                        objOut.writeUTF("intending inside player");
+                        objOut.flush();
+
+
+
+                        try {
+                            sleep(5000);
+                        } catch (InterruptedException ex) {
+                            System.out.println("sleep exception, may be awaken");
+                        }
+                        //attach anchorPane to scene, then make it current window
+                        scene = new Scene(anchorPane, SCREEN_WIDTH, SCREEN_HEIGHT);
+                        primaryStage.setScene(scene);
+                    } catch (IOException ex) {
+                        Logger.getLogger(Cw2_pong.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                };
+                mtd.run();
                 
-                //player 1 body
-                wallP1 = new Rectangle(PLAYER_WIDTH, PLAYER_HEIGHT, Color.GREEN);
-//                wallP1.setX(0.0);
-//                wallP1.setY(0.0);
-                //player 1 body container
-                wallP1Group = new Group(wallP1);
-                
-                //player 2 body
-                wallP2 = new Rectangle(PLAYER_WIDTH, PLAYER_HEIGHT, Color.GREEN);
-//                wallP2.setX(SCREEN_WIDTH-PLAYER_WIDTH);
-//                wallP2.setY(0.0);
-                //player 2 body container
-                wallP2Group = new Group(wallP2);
-                
-                //ball body
-                Circle ball = new Circle(BALL_RADIUS, Color.GREEN);
-                ball.setCenterX(0.0);
-                ball.setCenterY(0.0);
-                
-                //to hold graphics on pane based on X, Y coordinates
-                anchorPane = new AnchorPane();
-                anchorPane.setBackground(
-                        new Background(
-                        new BackgroundFill(
-                            Color.AZURE,
-                            CornerRadii.EMPTY,
-                            new Insets(10))
-                    )
-                );
-                //player1 body position
-                AnchorPane.setTopAnchor(wallP1Group, player1YPos);
-                AnchorPane.setLeftAnchor(wallP1Group, 0.0);
-                anchorPane.getChildren().add(wallP1Group);
-                //player2 body position
-                AnchorPane.setLeftAnchor(wallP2Group, 0.0);
-                AnchorPane.setTopAnchor(wallP2Group, player2YPos);
-                anchorPane.getChildren().add(wallP2Group);
-                //ball body position
-                AnchorPane.setTopAnchor(ball, ballYPos);
-                AnchorPane.setLeftAnchor(ball, ballXPos);
-                anchorPane.getChildren().add(ball);
-                
-                
-                roomSocket = new Socket(serverIP, roomPort);
-                ObjectOutputStream objOut = new ObjectOutputStream(roomSocket.getOutputStream());
-                ObjectInputStream objIn = new ObjectInputStream(roomSocket.getInputStream());
-                objOut.writeUTF("intending inside player");
-                objOut.flush();
-                
-                
-                    
-                        sleep(5000);
-                      
-                //attach anchorPane to scene, then make it current window
-                scene = new Scene(anchorPane, SCREEN_WIDTH, SCREEN_HEIGHT);
-                primaryStage.setScene(scene);
-               
             } catch (IOException ex) {
                 System.out.println("IOException on client");
             }catch (Exception ex) {
