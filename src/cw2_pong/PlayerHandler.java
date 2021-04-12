@@ -16,11 +16,29 @@ public class PlayerHandler implements Runnable {
     private Player player;
     private InetAddress roomIP;
     private int roomPort;
-    private final ServerSocket ROOM_SERVER_SOCKET;
+    private ServerSocket roomServerSocket;
+    private boolean isHost;
+    private RoomHandler roomHandler;
 
-    public PlayerHandler(ServerSocket roomServerSocket, int roomPort, InetAddress roomIP) {
-        
-        this.ROOM_SERVER_SOCKET=roomServerSocket;
+    public RoomHandler getRoomHandler() {
+        return roomHandler;
+    }
+
+    public void setRoomHandler(RoomHandler roomHandler) {
+        this.roomHandler = roomHandler;
+    }
+    
+    public boolean isIsHost() {
+        return isHost;
+    }
+
+    public void setIsHost(boolean isHost) {
+        this.isHost = isHost;
+    }
+
+    public PlayerHandler(RoomHandler roomHandler, ServerSocket roomServerSocket, int roomPort, InetAddress roomIP) {
+        this.roomHandler=roomHandler;
+        this.roomServerSocket=roomServerSocket;
         this.roomPort=roomPort;
         this.roomIP=roomIP;
     }
@@ -30,8 +48,8 @@ public class PlayerHandler implements Runnable {
         return player;
     }
 
-    public ServerSocket getROOM_SERVER_SOCKET() {
-        return ROOM_SERVER_SOCKET;
+    public ServerSocket getRoomServerSocket() {
+        return roomServerSocket;
     }
     
     public void setPlayer(Player player){
@@ -56,12 +74,45 @@ public class PlayerHandler implements Runnable {
 
     private void handle(){
         try{
-            Socket connSocket = ROOM_SERVER_SOCKET.accept();
+            Socket connSocket = roomServerSocket.accept();
             ObjectOutputStream objOut = new ObjectOutputStream(connSocket.getOutputStream());
             ObjectInputStream objIn = new ObjectInputStream(connSocket.getInputStream());
-            System.out.println(objIn.readUTF());
             
+            isHost = objIn.readBoolean();
+            if(isHost){
+                double xPos = objIn.readDouble();
+                double yPos = objIn.readDouble();
+                int score=0;
+                InetAddress playerIp=connSocket.getInetAddress();
+                int playerPort=connSocket.getPort();
+                player = new Player(xPos, yPos, score, playerIp, playerPort );
+                System.out.println("Host Player created ");
+                System.out.println(player);
+                
+                //say room that this is player 1
+                roomHandler.setPlayer1(player);
+            }
+            else{
+//                //rules, protocols for player 2
+                
+                double xPos = objIn.readDouble();
+                double yPos = objIn.readDouble();
+                int score=0;
+                InetAddress playerIp=connSocket.getInetAddress();
+                int playerPort=connSocket.getPort();
+                player = new Player(xPos, yPos, score, playerIp, playerPort );
+                System.out.println("Joinee player created");
+                System.out.println(player);
+                
+                roomHandler.setHasGameStarted(true);
+                
+                //say room that this is player 2
+                System.out.println("host is - " + roomHandler.getPlayer1());
+                roomHandler.setPlayer2(player);
+            
+            }
             connSocket.close();
+            System.out.println("=========playerHandler end============");
         }
         catch(IOException ex){
             System.out.println("IO EXCEPTION IN ROOM HANDLER");

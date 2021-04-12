@@ -15,6 +15,9 @@ import java.net.UnknownHostException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -42,26 +45,33 @@ import javafx.stage.Stage;
  */
 public class Cw2_pong extends Application {
     //set game screen as 70% of User screen
-    private static final double SCREEN_WIDTH = Screen.getPrimary().getBounds().getWidth()*0.3;
-    private static final double SCREEN_HEIGHT = Screen.getPrimary().getBounds().getHeight()*0.4;
+    private static final double SCREEN_WIDTH = Screen.getPrimary().getBounds().getWidth();
+    private static final double SCREEN_HEIGHT = Screen.getPrimary().getBounds().getHeight();
     
     private final int serverPort = 9999;
     private InetAddress serverIP;
     private int roomPort;
-    Socket roomSocket;
+    private Socket roomSocket;
+    private ObjectOutputStream roomObjOut;
+    private ObjectInputStream roomObjIn;
+    boolean showPongScreen=false;
+    boolean isHost;
     
     private static final int PLAYER_HEIGHT = 120;
     private static final int PLAYER_WIDTH = 20;
     private static final double BALL_RADIUS = 14;
     
-    private double player1XPos = 0;
-    private double player1YPos = SCREEN_HEIGHT/2;
+    private double player1XPos;
+    private double player1YPos;
     
-    private double player2Xpos = SCREEN_WIDTH - PLAYER_WIDTH;
-    private double player2YPos = SCREEN_HEIGHT/2;
+    private double player2XPos;
+    private double player2YPos;
     
-    private double ballXPos = SCREEN_WIDTH/2;
-    private double ballYPos = SCREEN_HEIGHT/2;
+    private double ballXPos;
+    private double ballYPos;
+    
+    private double anchorPaneHeight=SCREEN_HEIGHT*0.7;
+    private double anchorPaneWidth=SCREEN_WIDTH*0.7;
     
     Rectangle wallP1;
     Rectangle wallP2;
@@ -69,6 +79,10 @@ public class Cw2_pong extends Application {
     Group wallP2Group;
     AnchorPane anchorPane;
     Scene scene;
+    Runnable showScreenFirstTime;
+    //predefining bcz listeners needs to be attached
+    Button enterRoomButton= new Button("Enter");
+    TextField gameCodeField = new TextField();
     
     @Override
     public void start(Stage primaryStage) {
@@ -110,115 +124,48 @@ public class Cw2_pong extends Application {
         
         
         hostGameButton.setOnAction((ActionEvent e) -> {
-            try {
-                //clear all nodes attached to popUpholder
-                popUpHolder.getChildren().clear();
+            
                 
-                //bring room code from server
-                try(Socket socket = new Socket(serverIP, serverPort)) {
-                    ObjectOutputStream objOut = new ObjectOutputStream(socket.getOutputStream());
-                    ObjectInputStream objIn = new ObjectInputStream(socket.getInputStream());
-                    objOut.writeBoolean(true); //letting mainserver know if player is host
-                    objOut.flush();
-                    
-                    roomPort = objIn.readInt(); //read allocated port from main server
-                    
-                    
-                    System.out.println("closing connection with main server");
-                    socket.close();
-                }
-                
-                
+            //clear all nodes attached to popUpholder
+            popUpHolder.getChildren().clear();
+
+            //bring room code from server
+            try(Socket socket = new Socket(serverIP, serverPort)) {
+                ObjectOutputStream objOut = new ObjectOutputStream(socket.getOutputStream());
+                ObjectInputStream objIn = new ObjectInputStream(socket.getInputStream());
+                isHost=true;
+                objOut.writeBoolean(isHost); //letting mainserver know if player is host
+                objOut.flush();
+
+                roomPort = objIn.readInt(); //read allocated port from main server
+
+//                System.out.println("closing connection with main server");
+                socket.close();
+            
                 //add pop msg label
                 Label popMsgLabel = new Label();
                 popMsgLabel.setText("Your game code to join is: ");
                 popUpHolder.getChildren().add(popMsgLabel);
-                
+
                 //room code display
-                TextField gameCodeField = new TextField();
+                gameCodeField = new TextField();
                 gameCodeField.setText(Integer.toString(roomPort));
                 gameCodeField.setEditable(false);
                 popUpHolder.getChildren().add(gameCodeField);
-                
+
                 popUpHolder.setVisible(true); //make it visible
                 //disable other buttons
                 hostGameButton.setDisable(true);
                 joinGameButton.setDisable(true);
-                System.out.println("before sleep, showing pop up" );
                 //let the code be on screen for 5 sec
-                
-                Runnable mtd = () -> {
-                    try {
-                        //player 1 body
-                        wallP1 = new Rectangle(PLAYER_WIDTH, PLAYER_HEIGHT, Color.GREEN);
-                        //                wallP1.setX(0.0);
-                        //                wallP1.setY(0.0);
-                        //player 1 body container
-                        wallP1Group = new Group(wallP1);
 
-                        //player 2 body
-                        wallP2 = new Rectangle(PLAYER_WIDTH, PLAYER_HEIGHT, Color.GREEN);
-                        //                wallP2.setX(SCREEN_WIDTH-PLAYER_WIDTH);
-                        //                wallP2.setY(0.0);
-                        //player 2 body container
-                        wallP2Group = new Group(wallP2);
-
-                        //ball body
-                        Circle ball = new Circle(BALL_RADIUS, Color.GREEN);
-                        ball.setCenterX(0.0);
-                        ball.setCenterY(0.0);
-
-                        //to hold graphics on pane based on X, Y coordinates
-                        anchorPane = new AnchorPane();
-                        anchorPane.setBackground(
-                                new Background(
-                                        new BackgroundFill(
-                                                Color.AZURE,
-                                                CornerRadii.EMPTY,
-                                                new Insets(10))
-                                )
-                        );
-                        //player1 body position
-                        AnchorPane.setTopAnchor(wallP1Group, player1YPos);
-                        AnchorPane.setLeftAnchor(wallP1Group, 0.0);
-                        anchorPane.getChildren().add(wallP1Group);
-                        //player2 body position
-                        AnchorPane.setLeftAnchor(wallP2Group, 0.0);
-                        AnchorPane.setTopAnchor(wallP2Group, player2YPos);
-                        anchorPane.getChildren().add(wallP2Group);
-                        //ball body position
-                        AnchorPane.setTopAnchor(ball, ballYPos);
-                        AnchorPane.setLeftAnchor(ball, ballXPos);
-                        anchorPane.getChildren().add(ball);
-
-
-                        roomSocket = new Socket(serverIP, roomPort);
-                        ObjectOutputStream objOut = new ObjectOutputStream(roomSocket.getOutputStream());
-                        ObjectInputStream objIn = new ObjectInputStream(roomSocket.getInputStream());
-                        objOut.writeUTF("intending inside player");
-                        objOut.flush();
-
-
-
-                        try {
-                            sleep(5000);
-                        } catch (InterruptedException ex) {
-                            System.out.println("sleep exception, may be awaken");
-                        }
-                        //attach anchorPane to scene, then make it current window
-                        scene = new Scene(anchorPane, SCREEN_WIDTH, SCREEN_HEIGHT);
-                        primaryStage.setScene(scene);
-                    } catch (IOException ex) {
-                        Logger.getLogger(Cw2_pong.class.getName()).log(Level.SEVERE, null, ex);
-                    }
-                };
-                mtd.run();
+                showPongScreen=true;
+                showScreenFirstTime.run();
                 
             } catch (IOException ex) {
-                System.out.println("IOException on client");
-            }catch (Exception ex) {
-                System.out.println("Due to sleep() there is an error");
+                System.out.println("main server error");
             }
+            
         });
         
         joinGameButton.setOnAction((ActionEvent e) -> {
@@ -230,15 +177,180 @@ public class Cw2_pong extends Application {
             popMsgLabel.setText("Enter code to join: ");
             popUpHolder.getChildren().add(popMsgLabel);
             
-            TextField gameCodeField = new TextField();
+            gameCodeField = new TextField();
             gameCodeField.setEditable(true);
             popUpHolder.getChildren().add(gameCodeField);
+            
+//            button already defined, not defining again bcz listner is attached with previous one
+            popUpHolder.getChildren().add(enterRoomButton);
             
             popUpHolder.setVisible(true); //make it visible
             
         });
+        
+        //a separate thread to display screen first time
+        showScreenFirstTime = () -> {
+            if(showPongScreen){
+//                System.out.println("it should show pong screen");
+                Platform.runLater(()-> { //to attach it with JavaFX thread
+                    try {
+                        //player 1 body
+                        wallP1 = new Rectangle(PLAYER_WIDTH, PLAYER_HEIGHT, Color.GREEN);
+                        //                wallP1.setX(0.0);
+                        //                wallP1.setY(0.0);
+                        //player 1 body container
+                        wallP1Group = new Group(wallP1);
+
+                        //player 2 body
+                        wallP2 = new Rectangle(PLAYER_WIDTH, PLAYER_HEIGHT, Color.RED);
+                        //                wallP2.setX(SCREEN_WIDTH-PLAYER_WIDTH);
+                        //                wallP2.setY(0.0);
+                        //player 2 body container
+                        wallP2Group = new Group(wallP2);
+
+                        //ball body
+                        Circle ball = new Circle(BALL_RADIUS, Color.GREEN);
+                        ballXPos=anchorPaneWidth/2;
+                        ballYPos=anchorPaneHeight/2;
+                        ball.setCenterX(ballXPos);
+                        ball.setCenterY(ballYPos);
+
+                        //to hold graphics on pane based on X, Y coordinates
+                        anchorPane = new AnchorPane();
+                        anchorPane.setBackground(
+                                new Background(
+                                    new BackgroundFill(
+                                        Color.AZURE,
+                                        CornerRadii.EMPTY,
+                                        Insets.EMPTY)
+                                )
+                        );
+
+                        //player1 body position
+                        player1XPos=0.0;
+                        player1YPos=anchorPaneHeight/2;
+                        AnchorPane.setLeftAnchor(wallP1Group, player1XPos);
+                        AnchorPane.setTopAnchor(wallP1Group, player1YPos);
+                        anchorPane.getChildren().add(wallP1Group);
+
+                        //player2 body position yet not defined
+                        player2XPos=anchorPaneWidth-PLAYER_WIDTH;
+                        player2YPos=anchorPaneHeight/2;
+                        AnchorPane.setLeftAnchor(wallP2Group, player2XPos);
+                        AnchorPane.setTopAnchor(wallP2Group, player2YPos);
+                        anchorPane.getChildren().add(wallP2Group);
+
+                        //ball body position
+                        AnchorPane.setTopAnchor(ball, ballYPos);
+                        AnchorPane.setLeftAnchor(ball, ballXPos);
+                        anchorPane.getChildren().add(ball);
+                        
+                        
+                        try {
+                            Thread.sleep(4000);
+                        }catch(Exception ex){}
+
+                        //join in the room created
+                        roomSocket = new Socket(serverIP, roomPort);
+                        roomObjOut = new ObjectOutputStream(roomSocket.getOutputStream());
+                        roomObjIn = new ObjectInputStream(roomSocket.getInputStream());
+                        //tell room that player is host
+                        roomObjOut.writeBoolean(isHost);
+                        if(isHost){
+                            //send player 1 positions
+                            roomObjOut.writeDouble(player1XPos);
+                            roomObjOut.writeDouble(player1YPos);
+                            roomObjOut.flush();
+                        }else{
+                            
+                            //send player 2 positions
+                            roomObjOut.writeDouble(player2XPos);
+                            roomObjOut.writeDouble(player2YPos);
+                            roomObjOut.flush();
+                            
+                        }
+                        
+                        roomSocket.close();
+                        
+                        //temorary msg
+                        VBox tempMsgHolder = new VBox();
+                        if(isHost){
+                            //keep code till other user joins
+                            
+                            Label tempCodeLabel = new Label();
+                            tempCodeLabel.setText("Your game code to join is: ");
+                            tempMsgHolder.getChildren().add(tempCodeLabel);
+                        
+                            //temp room code display
+                            TextField tempCodeField = new TextField();
+                            tempCodeField.setText(Integer.toString(roomPort));
+                            tempCodeField.setEditable(false);
+                            tempMsgHolder.getChildren().add(tempCodeField);
+                        }else{
+                            tempMsgHolder.getChildren().add(
+                                    new Label("welcome to room " + roomPort)
+                            );
+                        }
+                        //code holder position
+                        AnchorPane.setTopAnchor(tempMsgHolder, anchorPaneWidth*0.10);
+                        AnchorPane.setLeftAnchor(tempMsgHolder, anchorPaneWidth*0.30);
+                        anchorPane.getChildren().add(tempMsgHolder);
+                        
+                        //attach anchorPane to scene, then make it current window
+                        scene = new Scene(anchorPane, anchorPaneWidth, anchorPaneHeight);
+                        primaryStage.setScene(scene);
+                        primaryStage.setX(SCREEN_WIDTH*0.15);
+                        primaryStage.setY(SCREEN_HEIGHT*0.10);
+
+
+                    } catch (Exception ex) {
+                        System.out.println(ex.getClass() + " due to " + ex.getCause());
+                        ex.printStackTrace();
+                    }
+                });
+            }
+        };
+        
+        enterRoomButton.setOnAction((ActionEvent e) -> {
+            //directly enter in room bcz u already know id
+            roomPort = Integer.valueOf(gameCodeField.getText()); //read allocated port from main server
+//            try{
+//                //join in the room created
+//                roomSocket = new Socket(serverIP, roomPort);
+//                roomObjOut = new ObjectOutputStream(roomSocket.getOutputStream());
+//                roomObjIn = new ObjectInputStream(roomSocket.getInputStream());
+//                roomObjOut.writeBoolean(isHost);
+//                roomObjOut.writeUTF("room joined by client");
+//                roomObjOut.flush();
+//                roomSocket.close();
+//            }catch(IOException ex){
+//                System.out.println("There is no room with id: "+roomPort);
+//                
+//                popUpHolder.getChildren().add(
+//                        new Label("\"There is no room with id: \"+roomPort")
+//                );
+//            }
+//            System.out.println("ENTER PRESSED");
+            showPongScreen=true;
+            showScreenFirstTime.run();
+            
+        });
+        // force the field to be numeric only
+        gameCodeField.textProperty().addListener(new ChangeListener<String>() {
+            @Override
+            public void changed(
+                    ObservableValue<?extends String> observable,
+                    String oldValue, 
+                    String newValue) {
+                
+                if (!newValue.matches("\\d*")) {
+                    gameCodeField.setText(newValue.replaceAll("[^\\d]", ""));
+                }
+            }
+        });
+        
         //setting current scene as start window
-        scene = new Scene(gridPane, SCREEN_WIDTH, SCREEN_HEIGHT);
+        scene = new Scene(gridPane, SCREEN_WIDTH*0.3, SCREEN_HEIGHT*0.3);
         primaryStage.setTitle("The Pong Game");
         primaryStage.setScene(scene);
         primaryStage.show();

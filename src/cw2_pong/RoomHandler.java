@@ -11,32 +11,62 @@ import java.net.ServerSocket;
  */
 public class RoomHandler implements Runnable, Serializable{
     
-    private final int port;
-    private Player host;
-    private int numberOfPlayers;
+    private final int roomPort;
+//    private Player host;
+    private int numberOfPlayers; //to control players in room
+    private Player player1; //host
+    private Player player2; //joinee
+    private boolean hasGameStarted;
     
     public RoomHandler(int port) {
-        this.port = port;
+        this.roomPort = port;
         this.numberOfPlayers=0;
+        this.hasGameStarted=false;
     }
 
-    public int getPort() {
-        return port;
+    public boolean isHasGameStarted() {
+        return hasGameStarted;
     }
 
-    public Player getHost() {
-        return host;
+    public void setHasGameStarted(boolean hasGameStarted) {
+        this.hasGameStarted = hasGameStarted;
     }
 
-    public void setHost(Player host) {
-        this.host = host;
+    public Player getPlayer1() {
+        return player1;
     }
+
+    public void setPlayer1(Player player1) {
+        this.player1 = player1;
+    }
+
+    public Player getPlayer2() {
+        return player2;
+    }
+
+    public void setPlayer2(Player player2) {
+        this.player2 = player2;
+    }
+    
+    
+
+    public int getRoomPort() {
+        return roomPort;
+    }
+
+//    public Player getHost() {
+//        return host;
+//    }
+//
+//    public void setHost(Player host) {
+//        this.host = host;
+//    }
     
     
     public void handleRoom(){
         try{
-            ServerSocket serverSocket = new ServerSocket(port);
-            System.out.println("Room Handler Ready at port - " + this.port);
+            ServerSocket serverSocket = new ServerSocket(roomPort);
+            System.out.println("Room Handler Ready at port - " + this.roomPort);
             
             while(numberOfPlayers<2){
 //                Socket connSocket = serverSocket.accept();
@@ -53,10 +83,12 @@ public class RoomHandler implements Runnable, Serializable{
 //                }
                 numberOfPlayers++;
                 PlayerHandler playerHandler = new PlayerHandler(
+                        this, //roomHandler obj
                         serverSocket,
-                        port,
+                        roomPort,
                         serverSocket.getInetAddress()
                 );
+                
                 Thread playerThread = new Thread(playerHandler);
                 playerThread.start();
                 

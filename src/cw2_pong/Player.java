@@ -14,22 +14,24 @@ import java.net.InetAddress;
  */
 public class Player implements Serializable {
     private InetAddress ip;
-    private int port;
-    private int xPosition;
-    private int yPosition;
+    private int playerPort;
+    private double xPosition;
+    private double yPosition;
     private int score;
 
     //in case you want to reate object and then add parameters
     public Player() {
     }
 
-    public Player(int xPostion, int yPosition, int score, InetAddress ip, int port) {
+    public Player(double xPostion, double yPosition, int score, InetAddress ip, int playerPort) {
         this.xPosition = xPostion;
         this.yPosition = yPosition;
         this.score = score;
         this.ip = ip;
-        this.port = port;
+        this.playerPort = playerPort;
     }
+
+    
 
     public InetAddress getIp() {
         return ip;
@@ -39,27 +41,27 @@ public class Player implements Serializable {
         this.ip = ip;
     }
 
-    public int getPort() {
-        return port;
+    public int getPlayerPort() {
+        return playerPort;
     }
 
-    public void setPort(int port) {
-        this.port = port;
+    public void setPlayerPort(int playerPort) {
+        this.playerPort = playerPort;
     }
 
-    public int getxPostion() {
+    public double getxPostion() {
         return xPosition;
     }
 
-    public void setxPostion(int xPostion) {
+    public void setxPostion(double xPostion) {
         this.xPosition = xPostion;
     }
 
-    public int getyPosition() {
+    public double getyPosition() {
         return yPosition;
     }
 
-    public void setyPosition(int yPosition) {
+    public void setyPosition(double yPosition) {
         this.yPosition = yPosition;
     }
 
@@ -71,8 +73,15 @@ public class Player implements Serializable {
         this.score = score;
     }
     
-    public void setPostion(int xPosition, int yPosition) {
+    public void setPostion(double xPosition, double yPosition) {
         this.xPosition = xPosition;
         this.yPosition = yPosition;
+    }
+    
+    @Override
+    public String toString() {
+        return "Player{" + "ip=" + ip + ",\nplayerPort=" 
+                + playerPort + ",\nxPosition=" + xPosition 
+                + ",\nyPosition=" + yPosition + ",\nscore=" + score + "\n}";
     }
 }

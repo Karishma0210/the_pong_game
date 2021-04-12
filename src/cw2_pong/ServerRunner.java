@@ -34,7 +34,7 @@ public class ServerRunner {
                 //first read whether he is host or joinee
                 boolean isHost;
                 isHost = objIn.readBoolean();
-                if(isHost){
+                if(isHost){ //create a room for host
                     int roomPort = getAvailablePort();
                     RoomHandler roomHandler = new RoomHandler(roomPort);
                     Thread roomThread = new Thread(roomHandler);
