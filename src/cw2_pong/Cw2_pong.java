@@ -54,7 +54,7 @@ public class Cw2_pong extends Application {
     private Socket roomSocket;
     private ObjectOutputStream roomObjOut;
     private ObjectInputStream roomObjIn;
-    boolean showPongScreen=false;
+    boolean showPongHostScreen=false;
     boolean isHost;
     
     private static final int PLAYER_HEIGHT = 120;
@@ -83,6 +83,9 @@ public class Cw2_pong extends Application {
     //predefining bcz listeners needs to be attached
     Button enterRoomButton= new Button("Enter");
     TextField gameCodeField = new TextField();
+    VBox tempMsgHolderOnGame = new VBox();
+    VBox hostMsgHolder;
+    VBox joineeMsgHolder;
     
     @Override
     public void start(Stage primaryStage) {
@@ -143,23 +146,23 @@ public class Cw2_pong extends Application {
                 socket.close();
             
                 //add pop msg label
-                Label popMsgLabel = new Label();
-                popMsgLabel.setText("Your game code to join is: ");
-                popUpHolder.getChildren().add(popMsgLabel);
+//                Label popMsgLabel = new Label();
+//                popMsgLabel.setText("Your game code to join is: ");
+//                popUpHolder.getChildren().add(popMsgLabel);
+//
+//                //room code display
+//                gameCodeField = new TextField();
+//                gameCodeField.setText(Integer.toString(roomPort));
+//                gameCodeField.setEditable(false);
+//                popUpHolder.getChildren().add(gameCodeField);
 
-                //room code display
-                gameCodeField = new TextField();
-                gameCodeField.setText(Integer.toString(roomPort));
-                gameCodeField.setEditable(false);
-                popUpHolder.getChildren().add(gameCodeField);
-
-                popUpHolder.setVisible(true); //make it visible
+//                popUpHolder.setVisible(true); //make it visible
                 //disable other buttons
                 hostGameButton.setDisable(true);
                 joinGameButton.setDisable(true);
                 //let the code be on screen for 5 sec
 
-                showPongScreen=true;
+                showPongHostScreen=true;
                 showScreenFirstTime.run();
                 
             } catch (IOException ex) {
@@ -190,7 +193,7 @@ public class Cw2_pong extends Application {
         
         //a separate thread to display screen first time
         showScreenFirstTime = () -> {
-            if(showPongScreen){
+            if(showPongHostScreen){
 //                System.out.println("it should show pong screen");
                 Platform.runLater(()-> { //to attach it with JavaFX thread
                     try {
@@ -222,7 +225,8 @@ public class Cw2_pong extends Application {
                                     new BackgroundFill(
                                         Color.AZURE,
                                         CornerRadii.EMPTY,
-                                        Insets.EMPTY)
+                                        Insets.EMPTY
+                                    )
                                 )
                         );
 
@@ -246,9 +250,9 @@ public class Cw2_pong extends Application {
                         anchorPane.getChildren().add(ball);
                         
                         
-                        try {
-                            Thread.sleep(4000);
-                        }catch(Exception ex){}
+//                        try {
+//                            Thread.sleep(4000);
+//                        }catch(Exception ex){}
 
                         //join in the room created
                         roomSocket = new Socket(serverIP, roomPort);
@@ -261,6 +265,21 @@ public class Cw2_pong extends Application {
                             roomObjOut.writeDouble(player1XPos);
                             roomObjOut.writeDouble(player1YPos);
                             roomObjOut.flush();
+                            
+                            //keep code till other user joins
+                            hostMsgHolder = new VBox();
+                            Label tempCodeLabel = new Label();
+                            tempCodeLabel.setText("Your game code to join is: ");
+                            hostMsgHolder.getChildren().add(tempCodeLabel);
+                            
+                            //temp room code display
+                            TextField tempCodeField = new TextField();
+                            tempCodeField.setText(Integer.toString(roomPort));
+                            tempCodeField.setEditable(false);
+                            hostMsgHolder.getChildren().add(tempCodeField);
+                            
+                            //attach it to game msg holder
+                            tempMsgHolderOnGame.getChildren().add(hostMsgHolder);
                         }else{
                             
                             //send player 2 positions
@@ -268,41 +287,44 @@ public class Cw2_pong extends Application {
                             roomObjOut.writeDouble(player2YPos);
                             roomObjOut.flush();
                             
-                        }
-                        
-                        roomSocket.close();
-                        
-                        //temorary msg
-                        VBox tempMsgHolder = new VBox();
-                        if(isHost){
-                            //keep code till other user joins
-                            
-                            Label tempCodeLabel = new Label();
-                            tempCodeLabel.setText("Your game code to join is: ");
-                            tempMsgHolder.getChildren().add(tempCodeLabel);
-                        
-                            //temp room code display
-                            TextField tempCodeField = new TextField();
-                            tempCodeField.setText(Integer.toString(roomPort));
-                            tempCodeField.setEditable(false);
-                            tempMsgHolder.getChildren().add(tempCodeField);
-                        }else{
-                            tempMsgHolder.getChildren().add(
-                                    new Label("welcome to room " + roomPort)
+                            //display msg on joinee screen
+                            joineeMsgHolder = new VBox();
+                            joineeMsgHolder.getChildren().add(
+                                new Label("welcome to room " + roomPort)
                             );
+                            tempMsgHolderOnGame.getChildren().remove(hostMsgHolder);
+                            tempMsgHolderOnGame.getChildren().add(joineeMsgHolder);
+                            
+                            
                         }
+                        roomSocket.close();
+                        Platform.runLater(()-> {
+                            try {
+                                Thread.sleep(2000); //say hello for 2 sec
+                            }catch(Exception ex){}
+
+                            anchorPane.getChildren().removeAll(tempMsgHolderOnGame);
+                        });
+                        
                         //code holder position
-                        AnchorPane.setTopAnchor(tempMsgHolder, anchorPaneWidth*0.10);
-                        AnchorPane.setLeftAnchor(tempMsgHolder, anchorPaneWidth*0.30);
-                        anchorPane.getChildren().add(tempMsgHolder);
+                        AnchorPane.setTopAnchor(tempMsgHolderOnGame, anchorPaneWidth*0.10);
+                        AnchorPane.setLeftAnchor(tempMsgHolderOnGame, anchorPaneWidth*0.30);
+                        anchorPane.getChildren().add(tempMsgHolderOnGame);
+                        
                         
                         //attach anchorPane to scene, then make it current window
                         scene = new Scene(anchorPane, anchorPaneWidth, anchorPaneHeight);
                         primaryStage.setScene(scene);
                         primaryStage.setX(SCREEN_WIDTH*0.15);
                         primaryStage.setY(SCREEN_HEIGHT*0.10);
+                        
+                        Platform.runLater(()-> {
+                            try {
+                                Thread.sleep(2000);
+                            }catch(Exception ex){}
 
-
+                            anchorPane.getChildren().removeAll(tempMsgHolderOnGame);
+                        });
                     } catch (Exception ex) {
                         System.out.println(ex.getClass() + " due to " + ex.getCause());
                         ex.printStackTrace();
@@ -311,30 +333,7 @@ public class Cw2_pong extends Application {
             }
         };
         
-        enterRoomButton.setOnAction((ActionEvent e) -> {
-            //directly enter in room bcz u already know id
-            roomPort = Integer.valueOf(gameCodeField.getText()); //read allocated port from main server
-//            try{
-//                //join in the room created
-//                roomSocket = new Socket(serverIP, roomPort);
-//                roomObjOut = new ObjectOutputStream(roomSocket.getOutputStream());
-//                roomObjIn = new ObjectInputStream(roomSocket.getInputStream());
-//                roomObjOut.writeBoolean(isHost);
-//                roomObjOut.writeUTF("room joined by client");
-//                roomObjOut.flush();
-//                roomSocket.close();
-//            }catch(IOException ex){
-//                System.out.println("There is no room with id: "+roomPort);
-//                
-//                popUpHolder.getChildren().add(
-//                        new Label("\"There is no room with id: \"+roomPort")
-//                );
-//            }
-//            System.out.println("ENTER PRESSED");
-            showPongScreen=true;
-            showScreenFirstTime.run();
-            
-        });
+        
         // force the field to be numeric only
         gameCodeField.textProperty().addListener(new ChangeListener<String>() {
             @Override
@@ -342,13 +341,21 @@ public class Cw2_pong extends Application {
                     ObservableValue<?extends String> observable,
                     String oldValue, 
                     String newValue) {
-                
+                System.out.println("method listener added");
                 if (!newValue.matches("\\d*")) {
+                    System.out.println("inside if");
                     gameCodeField.setText(newValue.replaceAll("[^\\d]", ""));
                 }
             }
         });
-        
+        enterRoomButton.setOnAction((ActionEvent e) -> {
+            //directly enter in room bcz u already know id
+            roomPort = Integer.valueOf(gameCodeField.getText()); //read allocated port from main server
+//            
+            showPongHostScreen=true;
+            showScreenFirstTime.run();
+            
+        });
         //setting current scene as start window
         scene = new Scene(gridPane, SCREEN_WIDTH*0.3, SCREEN_HEIGHT*0.3);
         primaryStage.setTitle("The Pong Game");
